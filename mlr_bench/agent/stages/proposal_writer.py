@@ -1,6 +1,9 @@
 """Proposal writing agent using Google ADK."""
 
+import uuid
 from google.adk.agents import Agent
+from google.adk.runners import InMemoryRunner
+from google.genai import types
 from loguru import logger
 
 from mlr_bench.models.task import Task
@@ -12,18 +15,20 @@ from mlr_bench.config.prompts import PROPOSAL_WRITING_PROMPT
 
 class ProposalWriter:
     """Agent for writing research proposals."""
-    
+
     def __init__(self, model_name: str = "gemini-2.0-flash", temperature: float = 0.7):
         """Initialize proposal writer.
-        
+
         Args:
             model_name: LLM model name
             temperature: Generation temperature
         """
         self.model_name = model_name
         self.temperature = temperature
+        self.app_name = "mlr_bench_proposal_writer"
         self.agent = self._create_agent()
-    
+        self.runner = InMemoryRunner(agent=self.agent, app_name=self.app_name)
+
     def _create_agent(self) -> Agent:
         """Create ADK agent for proposal writing."""
         return Agent(
@@ -54,19 +59,41 @@ class ProposalWriter:
             Research proposal
         """
         logger.info(f"Writing proposal for: {idea.title}")
-        
+
         # Format prompt
         prompt = PROPOSAL_WRITING_PROMPT.format(
             task_title=task.title,
             idea_title=idea.title,
             literature_summary=literature.related_work_summary
         )
-        
-        # Generate proposal using agent
-        response = await self.agent.run(prompt)
-        
-        # Parse response
-        proposal_text = response.text if hasattr(response, 'text') else str(response)
+
+        # Create message content
+        content = types.Content(
+            role='user',
+            parts=[types.Part.from_text(text=prompt)]
+        )
+
+        # Generate proposal using agent via runner
+        session_id = f'proposal_{task.task_id}_{uuid.uuid4().hex[:8]}'
+        user_id = 'mlr_bench'
+
+        # Create session first
+        await self.runner.session_service.create_session(
+            app_name=self.app_name,
+            user_id=user_id,
+            session_id=session_id
+        )
+
+        proposal_text = ""
+        async for event in self.runner.run_async(
+            user_id=user_id,
+            session_id=session_id,
+            new_message=content
+        ):
+            if event.content and event.content.parts:
+                for part in event.content.parts:
+                    if hasattr(part, 'text') and part.text:
+                        proposal_text += part.text
         
         proposal = self._parse_proposal_response(proposal_text, task, idea)
         

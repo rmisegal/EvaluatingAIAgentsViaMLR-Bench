@@ -132,41 +132,63 @@ async def install_python_package_mcp(package: str) -> dict:
 # Synchronous wrappers for Google ADK (which expects sync functions)
 def search_papers_sync(query: str, limit: int = 10) -> dict:
     """Synchronous wrapper for search_papers_mcp.
-    
+
     Args:
         query: Search query
         limit: Maximum number of results
-        
+
     Returns:
         Search results
     """
     import asyncio
-    
+    import nest_asyncio
+
+    # Allow nested event loops
+    nest_asyncio.apply()
+
     try:
         loop = asyncio.get_event_loop()
+        if loop.is_running():
+            # If loop is already running, create a task and wait for it
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = executor.submit(asyncio.run, search_papers_mcp(query, limit))
+                return future.result()
+        else:
+            return loop.run_until_complete(search_papers_mcp(query, limit))
     except RuntimeError:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-    
-    return loop.run_until_complete(search_papers_mcp(query, limit))
+        return loop.run_until_complete(search_papers_mcp(query, limit))
 
 
 def execute_python_code_sync(code: str, timeout: int = 30) -> dict:
     """Synchronous wrapper for execute_python_code_mcp.
-    
+
     Args:
         code: Python code to execute
         timeout: Execution timeout
-        
+
     Returns:
         Execution result
     """
     import asyncio
-    
+    import nest_asyncio
+
+    # Allow nested event loops
+    nest_asyncio.apply()
+
     try:
         loop = asyncio.get_event_loop()
+        if loop.is_running():
+            # If loop is already running, create a task and wait for it
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = executor.submit(asyncio.run, execute_python_code_mcp(code, timeout))
+                return future.result()
+        else:
+            return loop.run_until_complete(execute_python_code_mcp(code, timeout))
     except RuntimeError:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-    
-    return loop.run_until_complete(execute_python_code_mcp(code, timeout))
+        return loop.run_until_complete(execute_python_code_mcp(code, timeout))

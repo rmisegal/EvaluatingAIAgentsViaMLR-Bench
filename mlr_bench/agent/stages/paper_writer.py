@@ -1,6 +1,9 @@
 """Paper writing agent using Google ADK."""
 
+import uuid
 from google.adk.agents import Agent
+from google.adk.runners import InMemoryRunner
+from google.genai import types
 from loguru import logger
 
 from mlr_bench.models.task import Task
@@ -15,18 +18,20 @@ from mlr_bench.agent.tools import format_paper_section
 
 class PaperWriter:
     """Agent for writing research papers."""
-    
+
     def __init__(self, model_name: str = "gemini-2.0-flash", temperature: float = 0.7):
         """Initialize paper writer.
-        
+
         Args:
             model_name: LLM model name
             temperature: Generation temperature
         """
         self.model_name = model_name
         self.temperature = temperature
+        self.app_name = "mlr_bench_paper_writer"
         self.agent = self._create_agent()
-    
+        self.runner = InMemoryRunner(agent=self.agent, app_name=self.app_name)
+
     def _create_agent(self) -> Agent:
         """Create ADK agent for paper writing."""
         return Agent(
@@ -63,19 +68,41 @@ class PaperWriter:
             Research paper
         """
         logger.info(f"Writing paper for: {idea.title}")
-        
+
         # Format prompt
         prompt = PAPER_WRITING_PROMPT.format(
             task_title=task.title,
             proposal_abstract=proposal.abstract,
             experiment_results=str(experiment.results)
         )
-        
-        # Generate paper using agent
-        response = await self.agent.run(prompt)
-        
-        # Parse response
-        paper_text = response.text if hasattr(response, 'text') else str(response)
+
+        # Create message content
+        content = types.Content(
+            role='user',
+            parts=[types.Part.from_text(text=prompt)]
+        )
+
+        # Generate paper using agent via runner
+        session_id = f'paper_{task.task_id}_{uuid.uuid4().hex[:8]}'
+        user_id = 'mlr_bench'
+
+        # Create session first
+        await self.runner.session_service.create_session(
+            app_name=self.app_name,
+            user_id=user_id,
+            session_id=session_id
+        )
+
+        paper_text = ""
+        async for event in self.runner.run_async(
+            user_id=user_id,
+            session_id=session_id,
+            new_message=content
+        ):
+            if event.content and event.content.parts:
+                for part in event.content.parts:
+                    if hasattr(part, 'text') and part.text:
+                        paper_text += part.text
         
         paper = self._parse_paper_response(paper_text, task, idea, proposal)
         

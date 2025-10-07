@@ -1,7 +1,10 @@
 """Experimenter agent using Google ADK."""
 
+import uuid
 from pathlib import Path
 from google.adk.agents import Agent
+from google.adk.runners import InMemoryRunner
+from google.genai import types
 from loguru import logger
 
 from mlr_bench.models.task import Task
@@ -15,15 +18,15 @@ from mlr_bench.agent.tools import execute_python_code, save_to_file
 
 class Experimenter:
     """Agent for running experiments (simplified for educational purposes)."""
-    
+
     def __init__(
-        self, 
-        model_name: str = "gemini-2.0-flash", 
+        self,
+        model_name: str = "gemini-2.0-flash",
         temperature: float = 0.7,
         timeout: int = 3600
     ):
         """Initialize experimenter.
-        
+
         Args:
             model_name: LLM model name
             temperature: Generation temperature
@@ -32,8 +35,10 @@ class Experimenter:
         self.model_name = model_name
         self.temperature = temperature
         self.timeout = timeout
+        self.app_name = "mlr_bench_experimenter"
         self.agent = self._create_agent()
-    
+        self.runner = InMemoryRunner(agent=self.agent, app_name=self.app_name)
+
     def _create_agent(self) -> Agent:
         """Create ADK agent for experimentation."""
         return Agent(
@@ -71,22 +76,44 @@ class Experimenter:
             Experiment results
         """
         logger.info(f"Running experiments for: {idea.title}")
-        
+
         # For educational purposes, we'll generate code but not execute it
         # In a full implementation, this would use a coding agent to write and run code
-        
+
         # Format prompt
         prompt = EXPERIMENT_CODING_PROMPT.format(
             proposal_title=proposal.title,
             methodology=proposal.methodology,
             experimental_plan=proposal.experimental_plan
         )
-        
-        # Generate code using agent
-        response = await self.agent.run(prompt)
-        
-        # Parse response
-        code_text = response.text if hasattr(response, 'text') else str(response)
+
+        # Create message content
+        content = types.Content(
+            role='user',
+            parts=[types.Part.from_text(text=prompt)]
+        )
+
+        # Generate code using agent via runner
+        session_id = f'experiment_{task.task_id}_{uuid.uuid4().hex[:8]}'
+        user_id = 'mlr_bench'
+
+        # Create session first
+        await self.runner.session_service.create_session(
+            app_name=self.app_name,
+            user_id=user_id,
+            session_id=session_id
+        )
+
+        code_text = ""
+        async for event in self.runner.run_async(
+            user_id=user_id,
+            session_id=session_id,
+            new_message=content
+        ):
+            if event.content and event.content.parts:
+                for part in event.content.parts:
+                    if hasattr(part, 'text') and part.text:
+                        code_text += part.text
         
         # Save code to workspace
         code_file = workspace / "experiment.py"

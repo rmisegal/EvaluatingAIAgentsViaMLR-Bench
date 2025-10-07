@@ -1,6 +1,9 @@
 """Literature review agent using Google ADK."""
 
+import uuid
 from google.adk.agents import Agent
+from google.adk.runners import InMemoryRunner
+from google.genai import types
 from loguru import logger
 
 from mlr_bench.models.task import Task
@@ -12,18 +15,20 @@ from mlr_bench.mcp.mcp_tools import search_papers_sync
 
 class LiteratureReviewer:
     """Agent for conducting literature reviews."""
-    
+
     def __init__(self, model_name: str = "gemini-2.0-flash", temperature: float = 0.7):
         """Initialize literature reviewer.
-        
+
         Args:
             model_name: LLM model name
             temperature: Generation temperature
         """
         self.model_name = model_name
         self.temperature = temperature
+        self.app_name = "mlr_bench_literature_reviewer"
         self.agent = self._create_agent()
-    
+        self.runner = InMemoryRunner(agent=self.agent, app_name=self.app_name)
+
     def _create_agent(self) -> Agent:
         """Create ADK agent for literature review."""
         return Agent(
@@ -40,35 +45,57 @@ class LiteratureReviewer:
         )
     
     async def review_literature(
-        self, 
-        idea: ResearchIdea, 
+        self,
+        idea: ResearchIdea,
         task: Task
     ) -> LiteratureReview:
         """Conduct literature review for a research idea.
-        
+
         Args:
             idea: Research idea to review
             task: Original task
-            
+
         Returns:
             Literature review results
         """
         logger.info(f"Reviewing literature for idea: {idea.title}")
-        
+
         # Format prompt
         prompt = LITERATURE_REVIEW_PROMPT.format(
             idea_title=idea.title,
             main_idea=idea.main_idea
         )
-        
-        # Generate review using agent
-        response = await self.agent.run(prompt)
-        
-        # Parse response
-        review_text = response.text if hasattr(response, 'text') else str(response)
-        
+
+        # Create message content
+        content = types.Content(
+            role='user',
+            parts=[types.Part.from_text(text=prompt)]
+        )
+
+        # Generate review using agent via runner
+        session_id = f'literature_{task.task_id}_{uuid.uuid4().hex[:8]}'
+        user_id = 'mlr_bench'
+
+        # Create session first
+        await self.runner.session_service.create_session(
+            app_name=self.app_name,
+            user_id=user_id,
+            session_id=session_id
+        )
+
+        review_text = ""
+        async for event in self.runner.run_async(
+            user_id=user_id,
+            session_id=session_id,
+            new_message=content
+        ):
+            if event.content and event.content.parts:
+                for part in event.content.parts:
+                    if hasattr(part, 'text') and part.text:
+                        review_text += part.text
+
         review = self._parse_review_response(review_text, idea, task)
-        
+
         logger.info(f"Completed literature review for: {idea.title}")
         return review
     

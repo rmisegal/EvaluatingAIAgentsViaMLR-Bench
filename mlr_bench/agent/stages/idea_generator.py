@@ -1,6 +1,9 @@
 """Idea generation agent using Google ADK."""
 
+import uuid
 from google.adk.agents import Agent
+from google.adk.runners import InMemoryRunner
+from google.genai import types
 from loguru import logger
 
 from mlr_bench.models.task import Task
@@ -10,18 +13,20 @@ from mlr_bench.config.prompts import IDEA_GENERATION_PROMPT
 
 class IdeaGenerator:
     """Agent for generating research ideas."""
-    
+
     def __init__(self, model_name: str = "gemini-2.0-flash", temperature: float = 0.7):
         """Initialize idea generator.
-        
+
         Args:
             model_name: LLM model name
             temperature: Generation temperature
         """
         self.model_name = model_name
         self.temperature = temperature
+        self.app_name = "mlr_bench_idea_generator"
         self.agent = self._create_agent()
-    
+        self.runner = InMemoryRunner(agent=self.agent, app_name=self.app_name)
+
     def _create_agent(self) -> Agent:
         """Create ADK agent for idea generation."""
         return Agent(
@@ -37,31 +42,53 @@ class IdeaGenerator:
     
     async def generate_idea(self, task: Task) -> ResearchIdea:
         """Generate research idea for a task.
-        
+
         Args:
             task: Research task
-            
+
         Returns:
             Generated research idea
         """
         logger.info(f"Generating idea for task: {task.task_id}")
-        
+
         # Format prompt
         prompt = IDEA_GENERATION_PROMPT.format(
             task_title=task.title,
             task_description=task.description,
             task_category=task.category
         )
-        
-        # Generate idea using agent
-        response = await self.agent.run(prompt)
-        
-        # Parse response into ResearchIdea
-        # For simplicity, we'll extract from the text response
-        idea_text = response.text if hasattr(response, 'text') else str(response)
-        
+
+        # Create message content
+        content = types.Content(
+            role='user',
+            parts=[types.Part.from_text(text=prompt)]
+        )
+
+        # Generate idea using agent via runner
+        # Use unique session ID to avoid conflicts
+        session_id = f'idea_{task.task_id}_{uuid.uuid4().hex[:8]}'
+        user_id = 'mlr_bench'
+
+        # Create session first
+        await self.runner.session_service.create_session(
+            app_name=self.app_name,
+            user_id=user_id,
+            session_id=session_id
+        )
+
+        idea_text = ""
+        async for event in self.runner.run_async(
+            user_id=user_id,
+            session_id=session_id,
+            new_message=content
+        ):
+            if event.content and event.content.parts:
+                for part in event.content.parts:
+                    if hasattr(part, 'text') and part.text:
+                        idea_text += part.text
+
         idea = self._parse_idea_response(idea_text, task)
-        
+
         logger.info(f"Generated idea: {idea.title}")
         return idea
     

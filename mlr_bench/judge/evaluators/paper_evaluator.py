@@ -1,7 +1,9 @@
 """Paper evaluator using Google ADK."""
 
+import uuid
 from typing import List
 from google.adk.agents import Agent
+from google.genai import types
 from loguru import logger
 
 from mlr_bench.models.task import Task
@@ -49,20 +51,44 @@ class PaperEvaluator(BaseEvaluator):
             List with single evaluation result
         """
         logger.info(f"Evaluating paper: {paper.title} with {self.evaluator_name}")
-        
+
         # Format prompt
         prompt = PAPER_EVALUATION_PROMPT.format(
             paper_title=paper.title,
             abstract=paper.abstract
         )
-        
+
         # Add code context if available
         if code_files:
             prompt += f"\n\nCode files provided: {len(code_files)}"
-        
-        # Get evaluation from agent
-        response = await self.agent.run(prompt)
-        response_text = response.text if hasattr(response, 'text') else str(response)
+
+        # Create message content
+        content = types.Content(
+            role='user',
+            parts=[types.Part.from_text(text=prompt)]
+        )
+
+        # Get evaluation from agent via runner
+        session_id = f'eval_paper_{task.task_id}_{self.evaluator_name}_{uuid.uuid4().hex[:8]}'
+        user_id = 'mlr_bench'
+
+        # Create session first
+        await self.runner.session_service.create_session(
+            app_name=self.app_name,
+            user_id=user_id,
+            session_id=session_id
+        )
+
+        response_text = ""
+        async for event in self.runner.run_async(
+            user_id=user_id,
+            session_id=session_id,
+            new_message=content
+        ):
+            if event.content and event.content.parts:
+                for part in event.content.parts:
+                    if hasattr(part, 'text') and part.text:
+                        response_text += part.text
         
         # Parse scores
         scores = self._parse_scores(response_text)

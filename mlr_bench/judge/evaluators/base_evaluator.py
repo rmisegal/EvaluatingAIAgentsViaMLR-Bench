@@ -3,6 +3,7 @@
 from abc import ABC, abstractmethod
 from typing import List
 from google.adk.agents import Agent
+from google.adk.runners import InMemoryRunner
 
 from mlr_bench.models.evaluation import EvaluationResult
 from mlr_bench.agent.tools import calculate_average_score, extract_scores_from_text
@@ -10,22 +11,24 @@ from mlr_bench.agent.tools import calculate_average_score, extract_scores_from_t
 
 class BaseEvaluator(ABC):
     """Base class for evaluators."""
-    
+
     def __init__(self, model_name: str, evaluator_name: str):
         """Initialize evaluator.
-        
+
         Args:
             model_name: LLM model name
             evaluator_name: Name of this evaluator
         """
         self.model_name = model_name
         self.evaluator_name = evaluator_name
-        
+        self.app_name = f"mlr_bench_evaluator_{evaluator_name}"
+
         # Tools available to all evaluators - MUST be defined before _create_agent()
         self.common_tools = [calculate_average_score, extract_scores_from_text]
-        
+
         # Create agent after tools are defined
         self.agent = self._create_agent()
+        self.runner = InMemoryRunner(agent=self.agent, app_name=self.app_name)
     
     @abstractmethod
     def _create_agent(self) -> Agent:
