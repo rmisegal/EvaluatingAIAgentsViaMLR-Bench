@@ -71,7 +71,8 @@ try {
                 if ($testOutput -match "Python (\d+\.\d+\.\d+)") {
                     $fullVersion = $Matches[1]
                     $pyInfo = @{
-                        Command = "py -$major.$minor"
+                        Command = "py"
+                        Args = @("-$major.$minor")
                         Major = $major
                         Minor = $minor
                         Version = $fullVersion
@@ -105,6 +106,7 @@ foreach ($cmd in $pythonCommands) {
             if (-not $exists) {
                 $pyInfo = @{
                     Command = $cmd
+                    Args = @()
                     Major = $major
                     Minor = $minor
                     Version = $fullVersion
@@ -168,15 +170,17 @@ if (-not $bestPython) {
 }
 
 $PYTHON_CMD = $bestPython.Command
+$PYTHON_ARGS = $bestPython.Args
+$PYTHON_DISPLAY = if ($PYTHON_ARGS) { "$PYTHON_CMD $($PYTHON_ARGS -join ' ')" } else { $PYTHON_CMD }
 Write-Host ""
-Write-Host "✅ Selected: $PYTHON_CMD (Python $($bestPython.Version))" -ForegroundColor Green
-"Using: $PYTHON_CMD (Python $($bestPython.Version))" | Out-File -Append -FilePath $InstallLog
+Write-Host "✅ Selected: $PYTHON_DISPLAY (Python $($bestPython.Version))" -ForegroundColor Green
+"Using: $PYTHON_DISPLAY (Python $($bestPython.Version))" | Out-File -Append -FilePath $InstallLog
 
 # Get full path of selected Python
 try {
     if ($bestPython.Launcher) {
         # Using py launcher
-        $pythonPath = & $PYTHON_CMD -c "import sys; print(sys.executable)" 2>&1
+        $pythonPath = & $PYTHON_CMD $PYTHON_ARGS -c "import sys; print(sys.executable)" 2>&1
         Write-Host "   Location: $pythonPath" -ForegroundColor Cyan
     } else {
         $pythonPath = (Get-Command $PYTHON_CMD).Source
@@ -209,8 +213,8 @@ if (Test-Path $venvPath) {
 
 # Create venv using selected Python
 if ($bestPython.Launcher) {
-    # Using py launcher
-    & $PYTHON_CMD -m venv .venv
+    # Using py launcher with version argument
+    & $PYTHON_CMD $PYTHON_ARGS -m venv .venv
 } else {
     # Using direct command
     & $PYTHON_CMD -m venv .venv
@@ -391,7 +395,7 @@ $installInfo = @"
 # MLR-Bench Installation Info
 Date: $(Get-Date)
 Script: $ScriptDir
-Python Command: $PYTHON_CMD
+Python Command: $PYTHON_DISPLAY
 Python Version: $($bestPython.Version)
 Python Location: $pythonPath
 Virtual Environment: $venvPath
