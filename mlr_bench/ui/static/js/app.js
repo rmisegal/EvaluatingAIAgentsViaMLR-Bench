@@ -49,6 +49,9 @@ function handleAgentEvent(event) {
     // Update client status (client is active)
     updateClientStatus(true);
     
+    // Store agent data for modal
+    storeAgentData(stage, eventType, event.data);
+    
     // Update stage status
     if (stageMap[stage]) {
         updateStageStatus(stage, eventType, event.data);
@@ -245,3 +248,150 @@ function updateClientStatus(active) {
         clientActive = false;
     }
 }
+
+// Agent data storage
+const agentData = {
+    idea: { systemPrompt: '', input: '', output: '' },
+    literature: { systemPrompt: '', input: '', output: '' },
+    proposal: { systemPrompt: '', input: '', output: '' },
+    experiment: { systemPrompt: '', input: '', output: '' },
+    paper: { systemPrompt: '', input: '', output: '' },
+    evaluation: { systemPrompt: '', input: '', output: '' }
+};
+
+// System prompts for each agent
+const systemPrompts = {
+    idea: `You are a creative AI research scientist. Generate a novel research idea.
+
+Generate a research idea that includes:
+1. A clear and concise title
+2. Motivation: Why is this research important?
+3. Main idea: What is the core concept?
+4. Methodology: How would you approach this?
+5. Expected outcomes: What results do you anticipate?
+
+Be creative, novel, and feasible.`,
+    
+    literature: `You are an expert research assistant conducting a literature review.
+
+Conduct a literature review that includes:
+1. Key findings from related work
+2. Identification of the research gap
+3. Summary of how existing work relates to this idea
+
+Provide a comprehensive review that situates this research idea in the current state of the field.`,
+    
+    proposal: `You are an experienced research scientist writing a detailed research proposal.
+
+Write a complete research proposal with the following sections:
+1. Abstract (150-200 words)
+2. Introduction (explaining the problem and motivation)
+3. Related Work (building on the literature review)
+4. Methodology (detailed approach and techniques)
+5. Expected Results (anticipated outcomes)
+6. Experimental Plan (how to validate the approach)
+
+Write in a clear, academic style suitable for a top-tier ML conference.`,
+    
+    experiment: `You are an expert ML engineer implementing research experiments.
+
+Generate Python code to implement the proposed experiments. Include:
+1. Data loading and preprocessing
+2. Model implementation
+3. Training loop
+4. Evaluation metrics
+5. Result logging
+
+Use PyTorch or TensorFlow. Keep code modular and well-documented.`,
+    
+    paper: `You are an accomplished research scientist writing a conference paper.
+
+Write a complete research paper with these sections:
+1. Abstract
+2. Introduction
+3. Related Work
+4. Methodology
+5. Experiments
+6. Results
+7. Discussion
+8. Conclusion
+9. References
+
+Write in the style of a top-tier ML conference paper (ICLR, NeurIPS, ICML).`,
+    
+    evaluation: `You are an expert reviewer evaluating research work.
+
+Evaluate the research on multiple criteria:
+1. Novelty and originality
+2. Technical soundness
+3. Clarity and presentation
+4. Experimental validation
+5. Significance and impact
+
+Provide scores (1-10) and detailed feedback for each criterion.`
+};
+
+// Store agent data when events arrive
+function storeAgentData(stage, eventType, data) {
+    if (!agentData[stage]) return;
+    
+    agentData[stage].systemPrompt = systemPrompts[stage] || 'No system prompt available';
+    
+    if (eventType === 'input') {
+        agentData[stage].input = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+    } else if (eventType === 'output') {
+        agentData[stage].output = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+    }
+}
+
+// Open agent modal
+function openAgentModal(stage) {
+    const modal = document.getElementById('agent-modal');
+    const data = agentData[stage];
+    
+    if (!data) return;
+    
+    // Update modal title
+    const stageNames = {
+        idea: 'Idea Generator',
+        literature: 'Literature Reviewer',
+        proposal: 'Proposal Writer',
+        experiment: 'Experimenter',
+        paper: 'Paper Writer',
+        evaluation: 'Evaluator (Judge)'
+    };
+    
+    document.getElementById('modal-title').textContent = stageNames[stage] || 'Agent Details';
+    
+    // Update content
+    document.getElementById('modal-system-prompt').textContent = data.systemPrompt || 'No system prompt available';
+    document.getElementById('modal-input').textContent = data.input || 'No input data yet';
+    document.getElementById('modal-output').textContent = data.output || 'No output data yet';
+    
+    // Show modal
+    modal.style.display = 'block';
+}
+
+// Close agent modal
+function closeAgentModal() {
+    document.getElementById('agent-modal').style.display = 'none';
+}
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+    const modal = document.getElementById('agent-modal');
+    if (event.target === modal) {
+        closeAgentModal();
+    }
+}
+
+// Add click handlers to stages
+document.addEventListener('DOMContentLoaded', () => {
+    const stages = ['idea', 'literature', 'proposal', 'experiment', 'paper', 'evaluation'];
+    stages.forEach(stage => {
+        const stageEl = document.getElementById(`stage-${stage}`);
+        if (stageEl) {
+            stageEl.addEventListener('click', () => openAgentModal(stage));
+        }
+    });
+});

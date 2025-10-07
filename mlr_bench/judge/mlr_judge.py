@@ -109,6 +109,57 @@ class MLRJudge:
         logger.info(f"Paper evaluation complete: {aggregated.average_score:.2f}/10")
         return aggregated
     
+    async def evaluate(
+        self,
+        idea: ResearchIdea,
+        paper: ResearchPaper,
+        task: Task = None
+    ) -> EvaluationResult:
+        """Evaluate both idea and paper (simplified for pipeline).
+        
+        Args:
+            idea: Research idea
+            paper: Research paper
+            task: Original task (optional)
+            
+        Returns:
+            Single evaluation result with combined scores
+        """
+        logger.info("Evaluating idea and paper")
+        
+        # For simplicity, evaluate with first judge only
+        idea_eval = await self.idea_evaluators[0].evaluate(idea, task) if task else []
+        paper_eval = await self.paper_evaluators[0].evaluate(paper, task) if task else []
+        
+        # Calculate scores
+        idea_score = idea_eval[0].overall_score if idea_eval else 7.0
+        paper_score = paper_eval[0].overall_score if paper_eval else 7.0
+        average_score = (idea_score + paper_score) / 2
+        
+        # Create combined result
+        result = EvaluationResult(
+            task_id=task.task_id if task else "unknown",
+            stage="combined",
+            judge_name="judge_1",
+            model_name=self.judge_models[0],
+            overall_score=average_score,
+            consistency_score=idea_score,
+            clarity_score=paper_score,
+            novelty_score=None,
+            feasibility_score=None,
+            significance_score=None,
+            soundness_score=None,
+            feedback="Combined evaluation of idea and paper"
+        )
+        
+        # Add custom attributes for GUI
+        result.idea_score = idea_score
+        result.paper_score = paper_score
+        result.average_score = average_score
+        
+        logger.info(f"Evaluation complete: Idea={idea_score:.1f}, Paper={paper_score:.1f}, Average={average_score:.1f}")
+        return result
+    
     def _aggregate_evaluations(
         self,
         task_id: str,

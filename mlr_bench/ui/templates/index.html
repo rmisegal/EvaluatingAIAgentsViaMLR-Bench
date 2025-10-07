@@ -117,6 +117,30 @@
         </div>
     </div>
 
+    <!-- Agent Details Modal -->
+    <div id="agent-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-title">Agent Details</h2>
+                <span class="modal-close" onclick="closeAgentModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="modal-section">
+                    <h3>🤖 System Prompt</h3>
+                    <pre id="modal-system-prompt" class="modal-code"></pre>
+                </div>
+                <div class="modal-section">
+                    <h3>📥 Input</h3>
+                    <pre id="modal-input" class="modal-code"></pre>
+                </div>
+                <div class="modal-section">
+                    <h3>📤 Output</h3>
+                    <pre id="modal-output" class="modal-code"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
 </html>
