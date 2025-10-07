@@ -37,6 +37,41 @@ def clear_events():
     return jsonify({"status": "success"})
 
 
+@app.route('/api/event', methods=['POST'])
+def receive_event():
+    """Receive event from client and broadcast to UI.
+    
+    This endpoint allows the mlr-bench client (running in a separate process)
+    to send events to the UI server.
+    """
+    from flask import request
+    
+    try:
+        event_data = request.get_json()
+        
+        # Create AgentEvent from received data
+        event = AgentEvent(
+            agent_name=event_data['agent_name'],
+            stage=event_data['stage'],
+            event_type=event_data['event_type'],
+            data=event_data.get('data', {})
+        )
+        event.timestamp = event_data.get('timestamp', event.timestamp)
+        
+        # Add to event bus
+        event_bus.events.append(event)
+        
+        # Broadcast to all connected WebSocket clients
+        socketio.emit('agent_event', event.to_dict())
+        
+        logger.debug(f"Received and broadcasted event: {event.agent_name} - {event.event_type}")
+        
+        return jsonify({"status": "success"})
+    except Exception as e:
+        logger.error(f"Error receiving event: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+
 @socketio.on('connect')
 def handle_connect():
     """Handle client connection."""

@@ -75,12 +75,24 @@ class EventBus:
         self.events.append(event)
         logger.debug(f"Event emitted: {event.agent_name} - {event.event_type}")
         
-        # Notify all listeners
+        # Notify all listeners (in-process)
         for listener in self.listeners:
             try:
                 listener(event)
             except Exception as e:
                 logger.error(f"Error in event listener: {e}")
+        
+        # Send to UI server via HTTP (cross-process)
+        try:
+            import requests
+            requests.post(
+                'http://localhost:5000/api/event',
+                json=event.to_dict(),
+                timeout=0.5
+            )
+        except Exception as e:
+            # Silently fail if UI server is not running
+            pass
     
     def subscribe(self, listener: Callable):
         """Subscribe to events.
