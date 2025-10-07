@@ -31,6 +31,7 @@ PATH=$env:PATH
 
 ## Python
 $(try { python --version 2>&1 } catch { "python: not found" })
+$(try { py -0 2>&1 } catch { "py launcher: not found" })
 
 ## Node.js
 $(try { node --version 2>&1 } catch { "node: not found" })
@@ -45,46 +46,81 @@ $backupContent | Out-File -FilePath $EnvBackup -Encoding UTF8
 Write-Host "✅ Environment backed up to: $EnvBackup" -ForegroundColor Green
 "" | Out-File -Append -FilePath $InstallLog
 
-# Function to check Python version
-function Get-PythonVersion {
-    param($pythonCmd)
-    try {
-        $versionOutput = & $pythonCmd --version 2>&1
-        if ($versionOutput -match "Python (\d+)\.(\d+)\.(\d+)") {
-            return @{
-                Command = $pythonCmd
-                Major = [int]$Matches[1]
-                Minor = [int]$Matches[2]
-                Patch = [int]$Matches[3]
-                Version = "$($Matches[1]).$($Matches[2]).$($Matches[3])"
-            }
-        }
-    } catch {
-        return $null
-    }
-    return $null
-}
-
-# Find all available Python versions
+# Find all available Python versions using py launcher
 Write-Host "" 
 Write-Host "🔍 Searching for Python installations..." -ForegroundColor Yellow
 
-$pythonCommands = @("python", "python3", "python3.11", "python3.12", "python3.13", "py")
 $foundPythons = @()
 
-foreach ($cmd in $pythonCommands) {
-    $pyInfo = Get-PythonVersion $cmd
-    if ($pyInfo -and $pyInfo.Major -ge 3) {
-        # Check if not already in list (avoid duplicates)
-        $exists = $foundPythons | Where-Object { $_.Version -eq $pyInfo.Version }
-        if (-not $exists) {
-            $foundPythons += $pyInfo
-            Write-Host "   Found: $($pyInfo.Command) -> Python $($pyInfo.Version)" -ForegroundColor Cyan
+# Try using py launcher (recommended for Windows)
+try {
+    $pyOutput = py -0 2>&1 | Out-String
+    
+    # Parse py -0 output
+    # Format: " -V:3.13 *        Python 3.13 (64-bit)"
+    $pyOutput -split "`n" | ForEach-Object {
+        if ($_ -match '-V:(\d+)\.(\d+)\s+\*?\s+Python\s+(\d+\.\d+)') {
+            $major = [int]$Matches[1]
+            $minor = [int]$Matches[2]
+            $version = $Matches[3]
+            
+            # Test if this version works
+            try {
+                $testCmd = "py -$major.$minor"
+                $testOutput = & py "-$major.$minor" --version 2>&1
+                if ($testOutput -match "Python (\d+\.\d+\.\d+)") {
+                    $fullVersion = $Matches[1]
+                    $pyInfo = @{
+                        Command = "py -$major.$minor"
+                        Major = $major
+                        Minor = $minor
+                        Version = $fullVersion
+                        Launcher = $true
+                    }
+                    $foundPythons += $pyInfo
+                    Write-Host "   Found: py -$major.$minor -> Python $fullVersion" -ForegroundColor Cyan
+                }
+            } catch {
+                # Skip if version doesn't work
+            }
         }
+    }
+} catch {
+    Write-Host "   py launcher not available, trying direct commands..." -ForegroundColor Yellow
+}
+
+# Also try direct python commands
+$pythonCommands = @("python", "python3", "python3.11", "python3.12", "python3.13")
+foreach ($cmd in $pythonCommands) {
+    try {
+        $versionOutput = & $cmd --version 2>&1
+        if ($versionOutput -match "Python (\d+)\.(\d+)\.(\d+)") {
+            $major = [int]$Matches[1]
+            $minor = [int]$Matches[2]
+            $patch = [int]$Matches[3]
+            $fullVersion = "$major.$minor.$patch"
+            
+            # Check if not already in list
+            $exists = $foundPythons | Where-Object { $_.Version -eq $fullVersion }
+            if (-not $exists) {
+                $pyInfo = @{
+                    Command = $cmd
+                    Major = $major
+                    Minor = $minor
+                    Version = $fullVersion
+                    Launcher = $false
+                }
+                $foundPythons += $pyInfo
+                Write-Host "   Found: $cmd -> Python $fullVersion" -ForegroundColor Cyan
+            }
+        }
+    } catch {
+        # Command not found, skip
     }
 }
 
 if ($foundPythons.Count -eq 0) {
+    Write-Host ""
     Write-Host "❌ No Python installation found!" -ForegroundColor Red
     Write-Host ""
     Write-Host "Please install Python 3.11 or higher:" -ForegroundColor Yellow
@@ -95,12 +131,17 @@ if ($foundPythons.Count -eq 0) {
     exit 1
 }
 
-# Find best Python version (3.11+)
-$bestPython = $foundPythons | Where-Object { $_.Major -eq 3 -and $_.Minor -ge 11 } | Sort-Object -Property Minor -Descending | Select-Object -First 1
+# Find best Python version (3.11+, prefer highest)
+$bestPython = $foundPythons | 
+    Where-Object { $_.Major -eq 3 -and $_.Minor -ge 11 } | 
+    Sort-Object -Property Minor -Descending | 
+    Select-Object -First 1
 
 if (-not $bestPython) {
     # No Python 3.11+, find highest available
-    $bestPython = $foundPythons | Sort-Object -Property Major, Minor -Descending | Select-Object -First 1
+    $bestPython = $foundPythons | 
+        Sort-Object -Property Major, Minor -Descending | 
+        Select-Object -First 1
     
     Write-Host ""
     Write-Host "⚠️  WARNING: Python 3.11+ required, but found Python $($bestPython.Version)" -ForegroundColor Yellow
@@ -108,9 +149,15 @@ if (-not $bestPython) {
     Write-Host "MLR-Bench requires Python 3.11 or higher." -ForegroundColor Yellow
     Write-Host "Your current version ($($bestPython.Version)) may not work correctly." -ForegroundColor Yellow
     Write-Host ""
+    Write-Host "Available versions on your system:" -ForegroundColor Cyan
+    $foundPythons | ForEach-Object {
+        $marker = if ($_.Major -eq 3 -and $_.Minor -ge 11) { "✅" } else { "❌" }
+        Write-Host "   $marker $($_.Command) -> Python $($_.Version)" -ForegroundColor Cyan
+    }
+    Write-Host ""
     Write-Host "Options:" -ForegroundColor Cyan
     Write-Host "   1. Install Python 3.11+ from: https://www.python.org/downloads/" -ForegroundColor Cyan
-    Write-Host "   2. Continue anyway (not recommended)" -ForegroundColor Cyan
+    Write-Host "   2. Continue with Python $($bestPython.Version) (not recommended)" -ForegroundColor Cyan
     Write-Host ""
     
     $continue = Read-Host "Continue with Python $($bestPython.Version)? (y/N)"
@@ -122,8 +169,22 @@ if (-not $bestPython) {
 
 $PYTHON_CMD = $bestPython.Command
 Write-Host ""
-Write-Host "✅ Using: $PYTHON_CMD (Python $($bestPython.Version))" -ForegroundColor Green
+Write-Host "✅ Selected: $PYTHON_CMD (Python $($bestPython.Version))" -ForegroundColor Green
 "Using: $PYTHON_CMD (Python $($bestPython.Version))" | Out-File -Append -FilePath $InstallLog
+
+# Get full path of selected Python
+try {
+    if ($bestPython.Launcher) {
+        # Using py launcher
+        $pythonPath = & $PYTHON_CMD -c "import sys; print(sys.executable)" 2>&1
+        Write-Host "   Location: $pythonPath" -ForegroundColor Cyan
+    } else {
+        $pythonPath = (Get-Command $PYTHON_CMD).Source
+        Write-Host "   Location: $pythonPath" -ForegroundColor Cyan
+    }
+} catch {
+    Write-Host "   (Could not determine Python location)" -ForegroundColor Yellow
+}
 
 # Check Node.js (optional)
 Write-Host ""
@@ -146,8 +207,15 @@ if (Test-Path $venvPath) {
     Remove-Item -Recurse -Force $venvPath
 }
 
-& $PYTHON_CMD -m venv .venv
-Write-Host "✅ Virtual environment created" -ForegroundColor Green
+# Create venv using selected Python
+if ($bestPython.Launcher) {
+    # Using py launcher
+    & $PYTHON_CMD -m venv .venv
+} else {
+    # Using direct command
+    & $PYTHON_CMD -m venv .venv
+}
+Write-Host "✅ Virtual environment created with Python $($bestPython.Version)" -ForegroundColor Green
 
 # Activate virtual environment
 Write-Host ""
@@ -156,10 +224,14 @@ Write-Host "🔌 Activating virtual environment..." -ForegroundColor Yellow
 $activateScript = Join-Path $venvPath "Scripts\Activate.ps1"
 & $activateScript
 
+# Verify Python version in venv
+$venvPythonVersion = python --version 2>&1
+Write-Host "   Virtual environment Python: $venvPythonVersion" -ForegroundColor Cyan
+
 # Upgrade pip
 Write-Host ""
 Write-Host "⬆️  Upgrading pip..." -ForegroundColor Yellow
-& $PYTHON_CMD -m pip install --upgrade pip *>> $InstallLog
+python -m pip install --upgrade pip *>> $InstallLog
 Write-Host "✅ pip upgraded" -ForegroundColor Green
 
 # Install package
@@ -168,17 +240,11 @@ Write-Host "📦 Installing MLR-Bench..." -ForegroundColor Yellow
 pip install -e . *>> $InstallLog
 Write-Host "✅ MLR-Bench installed" -ForegroundColor Green
 
-# Install Google ADK
+# Install required packages explicitly
 Write-Host ""
-Write-Host "📦 Installing Google ADK..." -ForegroundColor Yellow
-pip install google-adk *>> $InstallLog
-Write-Host "✅ Google ADK installed" -ForegroundColor Green
-
-# Install Flask and SocketIO
-Write-Host ""
-Write-Host "📦 Installing Flask + SocketIO..." -ForegroundColor Yellow
-pip install flask flask-socketio aiohttp *>> $InstallLog
-Write-Host "✅ Flask + SocketIO installed" -ForegroundColor Green
+Write-Host "📦 Installing required packages..." -ForegroundColor Yellow
+pip install loguru google-adk flask flask-socketio aiohttp pydantic python-dotenv *>> $InstallLog
+Write-Host "✅ Required packages installed" -ForegroundColor Green
 
 # Configure API Keys
 Write-Host ""
@@ -318,14 +384,16 @@ Write-Host "✅ Directories created" -ForegroundColor Green
 # Run environment check
 Write-Host ""
 Write-Host "🧪 Running environment check..." -ForegroundColor Yellow
-& $PYTHON_CMD test_environment.py
+python test_environment.py
 
 # Save installation info
 $installInfo = @"
 # MLR-Bench Installation Info
 Date: $(Get-Date)
 Script: $ScriptDir
-Python: $PYTHON_CMD (Python $($bestPython.Version))
+Python Command: $PYTHON_CMD
+Python Version: $($bestPython.Version)
+Python Location: $pythonPath
 Virtual Environment: $venvPath
 "@
 
