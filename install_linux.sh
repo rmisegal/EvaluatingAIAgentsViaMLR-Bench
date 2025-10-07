@@ -45,16 +45,99 @@ echo "📦 Backing up current environment..."
 echo "✅ Environment backed up to: $ENV_BACKUP"
 echo "" | tee -a "$INSTALL_LOG"
 
-# Check Python version
-echo "🔍 Checking Python version..." | tee -a "$INSTALL_LOG"
-if ! command -v python3 &> /dev/null; then
-    echo "❌ Python 3 not found. Please install Python 3.11+" | tee -a "$INSTALL_LOG"
-    echo "   Download from: https://www.python.org/downloads/" | tee -a "$INSTALL_LOG"
+# Function to check Python version
+check_python_version() {
+    local cmd=$1
+    if command -v "$cmd" &> /dev/null; then
+        local version=$($cmd --version 2>&1 | grep -oP 'Python \K[0-9]+\.[0-9]+\.[0-9]+' || echo "")
+        if [ -n "$version" ]; then
+            local major=$(echo "$version" | cut -d. -f1)
+            local minor=$(echo "$version" | cut -d. -f2)
+            echo "$cmd|$version|$major|$minor"
+        fi
+    fi
+}
+
+# Find all available Python versions
+echo "🔍 Searching for Python installations..." | tee -a "$INSTALL_LOG"
+
+PYTHON_VERSIONS=()
+for cmd in python3.13 python3.12 python3.11 python3.10 python3.9 python3 python; do
+    result=$(check_python_version "$cmd")
+    if [ -n "$result" ]; then
+        # Check if version not already in list
+        version=$(echo "$result" | cut -d'|' -f2)
+        if ! printf '%s\n' "${PYTHON_VERSIONS[@]}" | grep -q "|$version|"; then
+            PYTHON_VERSIONS+=("$result")
+            echo "   Found: $cmd -> Python $version" | tee -a "$INSTALL_LOG"
+        fi
+    fi
+done
+
+if [ ${#PYTHON_VERSIONS[@]} -eq 0 ]; then
+    echo "❌ No Python installation found!" | tee -a "$INSTALL_LOG"
+    echo "" | tee -a "$INSTALL_LOG"
+    echo "Please install Python 3.11 or higher:" | tee -a "$INSTALL_LOG"
+    echo "   Ubuntu/Debian: sudo apt install python3.11 python3.11-venv" | tee -a "$INSTALL_LOG"
+    echo "   Fedora/RHEL: sudo dnf install python3.11" | tee -a "$INSTALL_LOG"
+    echo "   Or download from: https://www.python.org/downloads/" | tee -a "$INSTALL_LOG"
+    echo "" | tee -a "$INSTALL_LOG"
     exit 1
 fi
 
-python_version=$(python3 --version 2>&1 | awk '{print $2}')
-echo "✅ Found Python $python_version" | tee -a "$INSTALL_LOG"
+# Find best Python version (3.11+)
+BEST_PYTHON=""
+BEST_VERSION=""
+BEST_MAJOR=0
+BEST_MINOR=0
+
+for py_info in "${PYTHON_VERSIONS[@]}"; do
+    IFS='|' read -r cmd version major minor <<< "$py_info"
+    if [ "$major" -eq 3 ] && [ "$minor" -ge 11 ]; then
+        if [ "$minor" -gt "$BEST_MINOR" ]; then
+            BEST_PYTHON="$cmd"
+            BEST_VERSION="$version"
+            BEST_MAJOR="$major"
+            BEST_MINOR="$minor"
+        fi
+    fi
+done
+
+# If no 3.11+, use highest available
+if [ -z "$BEST_PYTHON" ]; then
+    for py_info in "${PYTHON_VERSIONS[@]}"; do
+        IFS='|' read -r cmd version major minor <<< "$py_info"
+        if [ "$major" -gt "$BEST_MAJOR" ] || ([ "$major" -eq "$BEST_MAJOR" ] && [ "$minor" -gt "$BEST_MINOR" ]); then
+            BEST_PYTHON="$cmd"
+            BEST_VERSION="$version"
+            BEST_MAJOR="$major"
+            BEST_MINOR="$minor"
+        fi
+    done
+    
+    echo "" | tee -a "$INSTALL_LOG"
+    echo "⚠️  WARNING: Python 3.11+ required, but found Python $BEST_VERSION" | tee -a "$INSTALL_LOG"
+    echo "" | tee -a "$INSTALL_LOG"
+    echo "MLR-Bench requires Python 3.11 or higher." | tee -a "$INSTALL_LOG"
+    echo "Your current version ($BEST_VERSION) may not work correctly." | tee -a "$INSTALL_LOG"
+    echo "" | tee -a "$INSTALL_LOG"
+    echo "Options:" | tee -a "$INSTALL_LOG"
+    echo "   1. Install Python 3.11+:" | tee -a "$INSTALL_LOG"
+    echo "      Ubuntu/Debian: sudo apt install python3.11 python3.11-venv" | tee -a "$INSTALL_LOG"
+    echo "      Fedora/RHEL: sudo dnf install python3.11" | tee -a "$INSTALL_LOG"
+    echo "   2. Continue anyway (not recommended)" | tee -a "$INSTALL_LOG"
+    echo "" | tee -a "$INSTALL_LOG"
+    
+    read -p "Continue with Python $BEST_VERSION? (y/N): " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        echo "Installation cancelled. Please install Python 3.11+" | tee -a "$INSTALL_LOG"
+        exit 1
+    fi
+fi
+
+echo "" | tee -a "$INSTALL_LOG"
+echo "✅ Using: $BEST_PYTHON (Python $BEST_VERSION)" | tee -a "$INSTALL_LOG"
 
 # Check Node.js (optional)
 echo "" | tee -a "$INSTALL_LOG"
@@ -74,7 +157,7 @@ if [ -d ".venv" ]; then
     rm -rf .venv
 fi
 
-python3 -m venv .venv
+$BEST_PYTHON -m venv .venv
 echo "✅ Virtual environment created" | tee -a "$INSTALL_LOG"
 
 # Activate virtual environment
@@ -94,17 +177,11 @@ echo "📦 Installing MLR-Bench..." | tee -a "$INSTALL_LOG"
 pip install -e . >> "$INSTALL_LOG" 2>&1
 echo "✅ MLR-Bench installed" | tee -a "$INSTALL_LOG"
 
-# Install Google ADK
+# Install required packages explicitly
 echo "" | tee -a "$INSTALL_LOG"
-echo "📦 Installing Google ADK..." | tee -a "$INSTALL_LOG"
-pip install google-adk >> "$INSTALL_LOG" 2>&1
-echo "✅ Google ADK installed" | tee -a "$INSTALL_LOG"
-
-# Install Flask and SocketIO
-echo "" | tee -a "$INSTALL_LOG"
-echo "📦 Installing Flask + SocketIO..." | tee -a "$INSTALL_LOG"
-pip install flask flask-socketio aiohttp >> "$INSTALL_LOG" 2>&1
-echo "✅ Flask + SocketIO installed" | tee -a "$INSTALL_LOG"
+echo "📦 Installing required packages..." | tee -a "$INSTALL_LOG"
+pip install loguru google-adk flask flask-socketio aiohttp pydantic python-dotenv >> "$INSTALL_LOG" 2>&1
+echo "✅ Required packages installed" | tee -a "$INSTALL_LOG"
 
 # Configure API Keys
 echo "" | tee -a "$INSTALL_LOG"
@@ -217,14 +294,14 @@ echo "✅ Directories created" | tee -a "$INSTALL_LOG"
 # Run environment check
 echo "" | tee -a "$INSTALL_LOG"
 echo "🧪 Running environment check..." | tee -a "$INSTALL_LOG"
-python3 test_environment.py
+python test_environment.py
 
 # Save installation info
 {
     echo "# MLR-Bench Installation Info"
     echo "Date: $(date)"
     echo "Script: $SCRIPT_DIR"
-    echo "Python: $(python3 --version)"
+    echo "Python: $BEST_PYTHON (Python $BEST_VERSION)"
     echo "Virtual Environment: $SCRIPT_DIR/.venv"
 } > "$BACKUP_DIR/install_info.txt"
 
