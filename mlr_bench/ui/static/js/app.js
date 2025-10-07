@@ -14,9 +14,22 @@ const stageMap = {
 };
 
 // Connection handlers
+socket.on('connect', () => {
+    console.log('WebSocket connected');
+    updateStatus('Connected');
+    showConnectionIndicator(true);
+});
+
+socket.on('disconnect', () => {
+    console.log('WebSocket disconnected');
+    updateStatus('Disconnected');
+    showConnectionIndicator(false);
+});
+
 socket.on('connected', (data) => {
     console.log('Connected to server:', data);
     updateStatus('Connected');
+    showConnectionIndicator(true);
 });
 
 // Handle agent events
@@ -158,3 +171,16 @@ window.addEventListener('load', () => {
             events.forEach(event => handleAgentEvent(event));
         });
 });
+
+
+// Show/hide connection indicator
+function showConnectionIndicator(connected) {
+    const statusEl = document.getElementById('stat-status');
+    if (connected) {
+        statusEl.textContent = '🟢 Connected';
+        statusEl.style.color = '#10b981';
+    } else {
+        statusEl.textContent = '🔴 Disconnected';
+        statusEl.style.color = '#ef4444';
+    }
+}

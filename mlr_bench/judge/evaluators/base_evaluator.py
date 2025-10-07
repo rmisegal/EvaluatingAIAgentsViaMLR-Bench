@@ -20,10 +20,12 @@ class BaseEvaluator(ABC):
         """
         self.model_name = model_name
         self.evaluator_name = evaluator_name
-        self.agent = self._create_agent()
         
-        # Tools available to all evaluators
+        # Tools available to all evaluators - MUST be defined before _create_agent()
         self.common_tools = [calculate_average_score, extract_scores_from_text]
+        
+        # Create agent after tools are defined
+        self.agent = self._create_agent()
     
     @abstractmethod
     def _create_agent(self) -> Agent:
