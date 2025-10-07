@@ -10,7 +10,8 @@ const stageMap = {
     'literature': 'literature',
     'proposal': 'proposal',
     'experiment': 'experiment',
-    'paper': 'paper'
+    'paper': 'paper',
+    'evaluation': 'evaluation'
 };
 
 // Connection handlers
@@ -82,6 +83,11 @@ function updateStageStatus(stage, eventType, data) {
             stageEl.classList.add('completed');
             statusEl.textContent = '✅ Completed';
             statusEl.style.color = '#4CAF50';
+            
+            // Show evaluation scores if this is evaluation stage
+            if (stage === 'evaluation' && data && data.scores) {
+                updateEvaluationScores(data.scores);
+            }
             break;
         case 'error':
             stageEl.classList.add('error');
@@ -93,7 +99,30 @@ function updateStageStatus(stage, eventType, data) {
             break;
         case 'output':
             dataEl.innerHTML = `<strong>Output:</strong> ${formatData(data)}`;
+            
+            // Show evaluation scores if this is evaluation stage
+            if (stage === 'evaluation' && data && data.scores) {
+                updateEvaluationScores(data.scores);
+            }
             break;
+    }
+}
+
+function updateEvaluationScores(scores) {
+    const scoresDiv = document.getElementById('scores-evaluation');
+    if (scoresDiv && scores) {
+        scoresDiv.style.display = 'block';
+        
+        // Update individual scores
+        if (scores.idea_score !== undefined) {
+            document.getElementById('score-idea-judge').textContent = scores.idea_score.toFixed(1);
+        }
+        if (scores.paper_score !== undefined) {
+            document.getElementById('score-paper-judge').textContent = scores.paper_score.toFixed(1);
+        }
+        if (scores.average !== undefined) {
+            document.getElementById('score-average').textContent = scores.average.toFixed(1);
+        }
     }
 }
 

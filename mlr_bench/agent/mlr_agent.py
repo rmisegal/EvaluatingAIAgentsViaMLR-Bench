@@ -98,14 +98,46 @@ class MLRAgent:
             await save_json(experiment.model_dump(), results_dir / "experiment.json")
             
             # Stage 5: Write Paper
-            logger.info("Stage 5/5: Writing research paper...")
+            logger.info("Stage 5/6: Writing research paper...")
             paper = await self.write_paper(
                 task, idea, literature, proposal, experiment
             )
             await save_json(paper.model_dump(), results_dir / "paper.json")
             await save_text(paper.to_markdown(), results_dir / "paper.md")
             
+            # Stage 6: Evaluate (Judge)
+            logger.info("Stage 6/6: Evaluating research...")
+            from mlr_bench.judge.mlr_judge import MLRJudge
+            from mlr_bench.agent.agent_wrapper import emit_agent_event
+            
+            judge = MLRJudge(self.config)
+            
+            # Emit started event
+            emit_agent_event("MLRJudge", "evaluation", "started")
+            
+            # Evaluate
+            evaluation = await judge.evaluate(idea, paper)
+            await save_json(evaluation.model_dump(), results_dir / "evaluation.json")
+            
+            # Emit output event with scores
+            scores_data = {
+                "idea_score": evaluation.idea_score,
+                "paper_score": evaluation.paper_score,
+                "average": evaluation.average_score,
+                "scores": {
+                    "idea_score": evaluation.idea_score,
+                    "paper_score": evaluation.paper_score,
+                    "average": evaluation.average_score
+                }
+            }
+            emit_agent_event("MLRJudge", "evaluation", "output", scores_data)
+            
+            # Emit completed event
+            emit_agent_event("MLRJudge", "evaluation", "completed", scores_data)
+            
             logger.info(f"Pipeline completed successfully for: {task.task_id}")
+            logger.info(f"Evaluation scores - Idea: {evaluation.idea_score:.1f}, Paper: {evaluation.paper_score:.1f}, Average: {evaluation.average_score:.1f}")
+            
             return paper
             
         except Exception as e:
