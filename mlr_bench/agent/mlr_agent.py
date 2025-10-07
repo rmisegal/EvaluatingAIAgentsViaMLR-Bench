@@ -120,23 +120,24 @@ class MLRAgent:
             await save_json(evaluation.model_dump(), results_dir / "evaluation.json")
             
             # Emit output event with scores
+            # Note: idea_score is stored in consistency_score, paper_score in clarity_score, average in overall_score
             scores_data = {
-                "idea_score": evaluation.idea_score,
-                "paper_score": evaluation.paper_score,
-                "average": evaluation.average_score,
+                "idea_score": evaluation.consistency_score,
+                "paper_score": evaluation.clarity_score,
+                "average": evaluation.overall_score,
                 "scores": {
-                    "idea_score": evaluation.idea_score,
-                    "paper_score": evaluation.paper_score,
-                    "average": evaluation.average_score
+                    "idea_score": evaluation.consistency_score,
+                    "paper_score": evaluation.clarity_score,
+                    "average": evaluation.overall_score
                 }
             }
             emit_agent_event("MLRJudge", "evaluation", "output", scores_data)
-            
+
             # Emit completed event
             emit_agent_event("MLRJudge", "evaluation", "completed", scores_data)
-            
+
             logger.info(f"Pipeline completed successfully for: {task.task_id}")
-            logger.info(f"Evaluation scores - Idea: {evaluation.idea_score:.1f}, Paper: {evaluation.paper_score:.1f}, Average: {evaluation.average_score:.1f}")
+            logger.info(f"Evaluation scores - Idea: {evaluation.consistency_score:.1f}, Paper: {evaluation.clarity_score:.1f}, Average: {evaluation.overall_score:.1f}")
             
             return paper
             

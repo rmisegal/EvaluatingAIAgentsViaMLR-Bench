@@ -138,10 +138,7 @@ class MLRJudge:
         
         # Create combined result
         result = EvaluationResult(
-            task_id=task.task_id if task else "unknown",
-            stage="combined",
-            judge_name="judge_1",
-            model_name=self.judge_models[0],
+            evaluator_name="judge_1",
             overall_score=average_score,
             consistency_score=idea_score,
             clarity_score=paper_score,
@@ -149,14 +146,14 @@ class MLRJudge:
             feasibility_score=None,
             significance_score=None,
             soundness_score=None,
-            feedback="Combined evaluation of idea and paper"
+            feedback="Combined evaluation of idea and paper",
+            strengths="Evaluated both idea and paper",
+            weaknesses=""
         )
-        
-        # Add custom attributes for GUI
-        result.idea_score = idea_score
-        result.paper_score = paper_score
-        result.average_score = average_score
-        
+
+        # Note: idea_score is stored in consistency_score, paper_score in clarity_score
+        # and average_score is stored in overall_score
+
         logger.info(f"Evaluation complete: Idea={idea_score:.1f}, Paper={paper_score:.1f}, Average={average_score:.1f}")
         return result
     
