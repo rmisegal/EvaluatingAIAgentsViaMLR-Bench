@@ -590,51 +590,60 @@ pip install flask flask-socketio aiohttp
 
 ## Architecture and Components
 
-### Agent System
+> **📐 For detailed system architecture, data flow, and communication protocols, see [ARCHITECTURE.md](ARCHITECTURE.md)**
+
+The document includes:
+- Complete system block diagram with all components
+- Detailed explanation of each module (with language tags: [PY], [JS], [HTML], [MCP], etc.)
+- Communication protocols (HTTP, WebSocket, MCP)
+- Data flow examples
+- 100-word summary of the architecture
+
+### Quick Overview
+
+**Agent System:**
 
 ```
-MLRAgent (Orchestrator)
-├── IdeaGenerator
-├── LiteratureReviewer
-├── ProposalWriter
-├── Experimenter
-└── PaperWriter
+MLRAgent (Orchestrator) [PY]
+├── IdeaGenerator [PY]
+├── LiteratureReviewer [PY]
+├── ProposalWriter [PY]
+├── Experimenter [PY]
+└── PaperWriter [PY]
 ```
 
-Each agent is implemented using **Google ADK** with:
-- Specialized instructions
-- Tool access (search, code execution, file operations)
-- Async communication
-- Event broadcasting to UI
+**Communication:**
+- Client → Server: HTTP POST (port 5000) [HTTP/JSON]
+- Server → Browser: WebSocket [WS]
+- Agents → Gemini: HTTP API [HTTP/JSON]
+- Tools → External Services: MCP [MCP]
 
-### Judge System
+**Judge System:**
 
 ```
-MLRJudge
-├── IdeaEvaluator
-└── PaperEvaluator
+MLRJudge [PY]
+├── IdeaEvaluator [PY]
+└── PaperEvaluator [PY]
 ```
 
-Multi-LLM judge system for evaluating outputs.
+**Tools Available to Agents [PY]:**
 
-### Tools Available to Agents
+1. **search_papers(query)** - Search academic papers via Semantic Scholar API [MCP/HTTP]
+2. **execute_python_code(code)** - Execute Python code in sandbox [MCP]
+3. **save_to_file(path, content)** - Save files to workspace [PY]
+4. **format_paper_section(section, content)** - Format paper sections [PY]
+5. **calculate_average_score(scores)** - Calculate evaluation scores [PY]
+6. **extract_scores_from_text(text)** - Parse scores from text [PY]
 
-1. **search_papers(query)** - Search academic papers via Semantic Scholar API
-2. **execute_python_code(code)** - Execute Python code in sandbox
-3. **save_to_file(path, content)** - Save files to workspace
-4. **format_paper_section(section, content)** - Format paper sections
-5. **calculate_average_score(scores)** - Calculate evaluation scores
-6. **extract_scores_from_text(text)** - Parse scores from text
+**Data Models [PY/JSON]:**
 
-### Data Models
-
-- **Task** - Research task definition
-- **ResearchIdea** - Generated idea with novelty and feasibility
-- **LiteratureReview** - Related work and references
-- **ResearchProposal** - Detailed proposal with methodology
-- **ExperimentResult** - Code, results, and analysis
-- **ResearchPaper** - Complete paper with all sections
-- **EvaluationResult** - Multi-dimensional scores and feedback
+- **Task** - Research task definition [JSON]
+- **ResearchIdea** - Generated idea with novelty and feasibility [JSON]
+- **LiteratureReview** - Related work and references [JSON]
+- **ResearchProposal** - Detailed proposal with methodology [JSON]
+- **ExperimentResult** - Code, results, and analysis [JSON]
+- **ResearchPaper** - Complete paper with all sections [TXT/JSON]
+- **EvaluationResult** - Multi-dimensional scores and feedback [JSON]
 
 ---
 
@@ -750,6 +759,30 @@ pytest tests/unit/test_models.py -v
 python test_environment.py
 ```
 
+**Checks:**
+- ✅ Python 3.11+
+- ✅ Node.js
+- ✅ All Python packages
+- ✅ Flask + SocketIO
+- ✅ API keys
+- ✅ Project structure
+- ✅ Data files
+
+### Client-Server Communication Test
+
+```bash
+# Test communication between client and UI server
+# (Start UI server first in another terminal)
+python test_client_server_communication.py
+```
+
+**Tests:**
+- ✅ UI server running (port 5000)
+- ✅ HTTP POST /api/event
+- ✅ HTTP GET /api/events
+- ✅ Event Bus → HTTP → Server
+- ✅ WebSocket endpoint
+
 ### Internet and API Check
 
 ```bash
@@ -758,6 +791,15 @@ python test_internet.py
 
 # Test tool functionality
 python test_tools.py
+```
+
+### Run All Tests
+
+```bash
+# Run everything
+pytest tests/unit/ -v
+python test_environment.py
+python test_client_server_communication.py
 ```
 
 ---

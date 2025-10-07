@@ -45,6 +45,9 @@ function handleAgentEvent(event) {
     const stage = event.stage;
     const eventType = event.event_type;
     
+    // Update client status (client is active)
+    updateClientStatus(true);
+    
     // Update stage status
     if (stageMap[stage]) {
         updateStageStatus(stage, eventType, event.data);
@@ -175,12 +178,41 @@ window.addEventListener('load', () => {
 
 // Show/hide connection indicator
 function showConnectionIndicator(connected) {
-    const statusEl = document.getElementById('stat-status');
+    const serverEl = document.getElementById('stat-server');
     if (connected) {
-        statusEl.textContent = '🟢 Connected';
-        statusEl.style.color = '#10b981';
+        serverEl.textContent = '🟢 Connected';
+        serverEl.style.color = '#10b981';
     } else {
-        statusEl.textContent = '🔴 Disconnected';
-        statusEl.style.color = '#ef4444';
+        serverEl.textContent = '🔴 Disconnected';
+        serverEl.style.color = '#ef4444';
+    }
+}
+
+// Track client activity
+let clientActivityTimeout = null;
+let clientActive = false;
+
+function updateClientStatus(active) {
+    const clientEl = document.getElementById('stat-client');
+    if (active) {
+        clientEl.textContent = '🟢 Running';
+        clientEl.style.color = '#10b981';
+        clientActive = true;
+        
+        // Reset timeout
+        if (clientActivityTimeout) {
+            clearTimeout(clientActivityTimeout);
+        }
+        
+        // Set client to idle after 10 seconds of no activity
+        clientActivityTimeout = setTimeout(() => {
+            clientEl.textContent = '⚪ Idle';
+            clientEl.style.color = '#666';
+            clientActive = false;
+        }, 10000);
+    } else {
+        clientEl.textContent = '⚪ Idle';
+        clientEl.style.color = '#666';
+        clientActive = false;
     }
 }
