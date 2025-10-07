@@ -14,6 +14,7 @@ from mlr_bench.models.literature import LiteratureReview
 from mlr_bench.models.experiment import ExperimentResult
 from mlr_bench.config.prompts import EXPERIMENT_CODING_PROMPT
 from mlr_bench.agent.tools import execute_python_code, save_to_file
+from mlr_bench.utils.retry import async_retry_on_503
 
 
 class Experimenter:
@@ -55,6 +56,7 @@ class Experimenter:
             tools=[execute_python_code, save_to_file]  # Add execution tools
         )
     
+    @async_retry_on_503(max_retries=5, base_delay=2.0)
     async def run_experiments(
         self,
         task: Task,

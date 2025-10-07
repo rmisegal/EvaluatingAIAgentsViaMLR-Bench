@@ -11,6 +11,7 @@ from mlr_bench.models.idea import ResearchIdea
 from mlr_bench.models.literature import LiteratureReview
 from mlr_bench.config.prompts import LITERATURE_REVIEW_PROMPT
 from mlr_bench.mcp.mcp_tools import search_papers_sync
+from mlr_bench.utils.retry import async_retry_on_503
 
 
 class LiteratureReviewer:
@@ -44,6 +45,7 @@ class LiteratureReviewer:
             tools=[search_papers_sync]  # Add MCP search tool
         )
     
+    @async_retry_on_503(max_retries=5, base_delay=2.0)
     async def review_literature(
         self,
         idea: ResearchIdea,

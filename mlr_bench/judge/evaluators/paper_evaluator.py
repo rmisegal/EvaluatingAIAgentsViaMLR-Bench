@@ -11,6 +11,7 @@ from mlr_bench.models.paper import ResearchPaper
 from mlr_bench.models.evaluation import EvaluationResult
 from mlr_bench.config.prompts import PAPER_EVALUATION_PROMPT
 from mlr_bench.judge.evaluators.base_evaluator import BaseEvaluator
+from mlr_bench.utils.retry import async_retry_on_503
 
 
 class PaperEvaluator(BaseEvaluator):
@@ -34,6 +35,7 @@ class PaperEvaluator(BaseEvaluator):
             tools=self.common_tools  # Add evaluation tools
         )
     
+    @async_retry_on_503(max_retries=5, base_delay=2.0)
     async def evaluate(
         self,
         paper: ResearchPaper,

@@ -11,6 +11,7 @@ from mlr_bench.models.idea import ResearchIdea
 from mlr_bench.models.literature import LiteratureReview
 from mlr_bench.models.proposal import ResearchProposal
 from mlr_bench.config.prompts import PROPOSAL_WRITING_PROMPT
+from mlr_bench.utils.retry import async_retry_on_503
 
 
 class ProposalWriter:
@@ -42,6 +43,7 @@ class ProposalWriter:
             )
         )
     
+    @async_retry_on_503(max_retries=5, base_delay=2.0)
     async def write_proposal(
         self,
         task: Task,

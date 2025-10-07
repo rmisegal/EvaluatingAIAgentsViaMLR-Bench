@@ -9,6 +9,7 @@ from loguru import logger
 from mlr_bench.models.task import Task
 from mlr_bench.models.idea import ResearchIdea
 from mlr_bench.config.prompts import IDEA_GENERATION_PROMPT
+from mlr_bench.utils.retry import async_retry_on_503
 
 
 class IdeaGenerator:
@@ -40,6 +41,7 @@ class IdeaGenerator:
             )
         )
     
+    @async_retry_on_503(max_retries=5, base_delay=2.0)
     async def generate_idea(self, task: Task) -> ResearchIdea:
         """Generate research idea for a task.
 

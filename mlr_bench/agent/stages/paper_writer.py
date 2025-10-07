@@ -14,6 +14,7 @@ from mlr_bench.models.experiment import ExperimentResult
 from mlr_bench.models.paper import ResearchPaper
 from mlr_bench.config.prompts import PAPER_WRITING_PROMPT
 from mlr_bench.agent.tools import format_paper_section
+from mlr_bench.utils.retry import async_retry_on_503
 
 
 class PaperWriter:
@@ -47,6 +48,7 @@ class PaperWriter:
             tools=[format_paper_section]  # Add formatting tool
         )
     
+    @async_retry_on_503(max_retries=5, base_delay=2.0)
     async def write_paper(
         self,
         task: Task,
