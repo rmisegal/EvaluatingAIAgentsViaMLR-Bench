@@ -1,0 +1,32 @@
+[
+  {
+    "task_id": "iclr2025_task_001",
+    "title": "Efficient Attention Mechanisms for Long Context",
+    "category": "LLM/VLM",
+    "description": "Develop novel attention mechanisms that can efficiently handle very long context windows (100K+ tokens) while maintaining computational efficiency and model performance.",
+    "workshop_name": "Efficient ML Workshop",
+    "conference": "ICLR",
+    "year": 2025,
+    "topics": ["attention", "efficiency", "transformers"]
+  },
+  {
+    "task_id": "neurips2024_task_042",
+    "title": "Multi-Agent Reinforcement Learning for Cooperative Tasks",
+    "category": "Reinforcement Learning",
+    "description": "Design and implement multi-agent RL algorithms that can learn cooperative behaviors in complex environments with partial observability.",
+    "workshop_name": "Multi-Agent RL Workshop",
+    "conference": "NeurIPS",
+    "year": 2024,
+    "topics": ["multi-agent", "cooperation", "MARL"]
+  },
+  {
+    "task_id": "icml2024_task_089",
+    "title": "Vision-Language Models for Scientific Image Understanding",
+    "category": "Multimodal",
+    "description": "Create vision-language models specifically designed for understanding scientific images such as microscopy, medical imaging, and astronomical data.",
+    "workshop_name": "AI for Science",
+    "conference": "ICML",
+    "year": 2024,
+    "topics": ["vision-language", "scientific imaging", "multimodal"]
+  }
+]

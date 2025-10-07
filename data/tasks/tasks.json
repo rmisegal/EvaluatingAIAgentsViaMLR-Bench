@@ -1,0 +1,102 @@
+[
+  {
+    "task_id": "iclr2025_bi_align",
+    "title": "Bidirectional Human-AI Alignment",
+    "category": "Trustworthy AI",
+    "description": "Develop methods for bidirectional alignment between humans and AI systems, ensuring mutual understanding and trust. Focus on creating frameworks where AI systems can understand human values while humans can understand AI decision-making processes.",
+    "workshop_name": "Bidirectional Human-AI Alignment Workshop",
+    "conference": "ICLR",
+    "year": 2025,
+    "topics": ["alignment", "human-AI interaction", "trustworthy AI"]
+  },
+  {
+    "task_id": "iclr2025_buildingtrust",
+    "title": "Building Trust in Language Models and Applications",
+    "category": "Trustworthy AI",
+    "description": "Research approaches to build and maintain trust in large language models and their applications. Address concerns about reliability, transparency, and accountability in LLM deployments.",
+    "workshop_name": "Building Trust in Language Models Workshop",
+    "conference": "ICLR",
+    "year": 2025,
+    "topics": ["trust", "language models", "transparency"]
+  },
+  {
+    "task_id": "iclr2025_data_problems",
+    "title": "Navigating and Addressing Data Problems for Foundation Models",
+    "category": "Trustworthy AI",
+    "description": "Identify and solve critical data-related challenges in foundation models, including data quality, bias, privacy, and representativeness. Develop methodologies for better data curation and management.",
+    "workshop_name": "Data Problems for Foundation Models Workshop",
+    "conference": "ICLR",
+    "year": 2025,
+    "topics": ["data quality", "foundation models", "data curation"]
+  },
+  {
+    "task_id": "iclr2025_dl4c",
+    "title": "Emergent Possibilities and Challenges in Deep Learning for Code",
+    "category": "LLM/VLM",
+    "description": "Explore emerging capabilities and challenges in applying deep learning to code generation, understanding, and analysis. Address issues in code quality, security, and reliability of AI-generated code.",
+    "workshop_name": "Deep Learning for Code Workshop",
+    "conference": "ICLR",
+    "year": 2025,
+    "topics": ["code generation", "program synthesis", "software engineering"]
+  },
+  {
+    "task_id": "iclr2025_mldpr",
+    "title": "The Future of Machine Learning Data Practices and Repositories",
+    "category": "Trustworthy AI",
+    "description": "Design future-proof practices and infrastructure for ML data management, sharing, and repositories. Focus on reproducibility, documentation, and ethical data practices.",
+    "workshop_name": "ML Data Practices Workshop",
+    "conference": "ICLR",
+    "year": 2025,
+    "topics": ["data management", "reproducibility", "data repositories"]
+  },
+  {
+    "task_id": "iclr2025_question",
+    "title": "Quantify Uncertainty and Hallucination in Foundation Models: The Next Frontier in Reliable AI",
+    "category": "LLM/VLM",
+    "description": "Develop methods to quantify and reduce uncertainty and hallucinations in foundation models. Create metrics and techniques for measuring model confidence and detecting unreliable outputs.",
+    "workshop_name": "Uncertainty and Hallucination Workshop",
+    "conference": "ICLR",
+    "year": 2025,
+    "topics": ["uncertainty quantification", "hallucination detection", "reliability"]
+  },
+  {
+    "task_id": "iclr2025_scope",
+    "title": "Scalable Optimization for Efficient and Adaptive Foundation Models",
+    "category": "Trustworthy AI",
+    "description": "Research scalable optimization techniques for training and adapting large foundation models efficiently. Focus on computational efficiency, memory optimization, and adaptive learning strategies.",
+    "workshop_name": "Scalable Optimization Workshop",
+    "conference": "ICLR",
+    "year": 2025,
+    "topics": ["optimization", "efficiency", "scalability"]
+  },
+  {
+    "task_id": "iclr2025_scsl",
+    "title": "Spurious Correlation and Shortcut Learning: Foundations and Solutions",
+    "category": "Trustworthy AI",
+    "description": "Investigate spurious correlations and shortcut learning in machine learning models. Develop methods to detect and mitigate these issues to improve model robustness and generalization.",
+    "workshop_name": "Spurious Correlation Workshop",
+    "conference": "ICLR",
+    "year": 2025,
+    "topics": ["spurious correlation", "robustness", "generalization"]
+  },
+  {
+    "task_id": "iclr2025_verifai",
+    "title": "VerifAI: AI Verification in the Wild",
+    "category": "Trustworthy AI",
+    "description": "Develop practical verification methods for AI systems deployed in real-world settings. Address challenges in formal verification, testing, and validation of AI systems under uncertainty.",
+    "workshop_name": "AI Verification Workshop",
+    "conference": "ICLR",
+    "year": 2025,
+    "topics": ["verification", "testing", "formal methods"]
+  },
+  {
+    "task_id": "iclr2025_wsl",
+    "title": "Neural Network Weights as a New Data Modality",
+    "category": "ML Theory",
+    "description": "Explore treating neural network weights as a new form of data modality. Investigate methods for analyzing, transferring, and learning from model weights across different architectures and tasks.",
+    "workshop_name": "Neural Network Weights Workshop",
+    "conference": "ICLR",
+    "year": 2025,
+    "topics": ["model weights", "transfer learning", "meta-learning"]
+  }
+]
