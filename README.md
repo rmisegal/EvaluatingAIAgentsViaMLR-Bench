@@ -9,6 +9,8 @@ This implementation is based on the research paper:
 
 **"Evaluating AI Agents on Open-Ended Machine Learning Research"**
 
+**Paper Link:** https://arxiv.org/abs/2505.19955
+
 **Original Authors:**
 - Chenhui Zhang (Lead Author)
 - And colleagues from the original research team
